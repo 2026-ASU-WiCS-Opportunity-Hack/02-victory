@@ -8,11 +8,13 @@ import type { StructuredNote } from "@/types";
 interface VoiceRecorderProps {
   onStructuredNote: (data: StructuredNote) => void;
   serviceTypes: string[];
+  onTranscript?: (text: string) => void;
 }
 
 export function VoiceRecorder({
   onStructuredNote,
   serviceTypes,
+  onTranscript,
 }: VoiceRecorderProps) {
   const [status, setStatus] = useState<
     "idle" | "recording" | "transcribing" | "structuring" | "done"
@@ -64,6 +66,7 @@ export function VoiceRecorder({
       if (!transcribeRes.ok) throw new Error(transcribeJson.error ?? "Transcribe failed");
       const text = transcribeJson.transcript as string;
       setTranscript(text);
+      onTranscript?.(text);
 
       setStatus("structuring");
       const structureRes = await fetch("/api/ai/structure-notes", {

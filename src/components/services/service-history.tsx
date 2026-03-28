@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { createClient } from "@/lib/supabase/server";
 import { getServicesForClient } from "@/lib/data/demo";
 import { buttonVariants } from "@/lib/button-variants";
 import { cn } from "@/lib/utils";
+import type { ServiceEntry } from "@/types";
 
 interface ServiceHistoryProps {
   clientId: string;
@@ -21,8 +23,20 @@ function formatServiceDate(iso: string) {
   });
 }
 
-export function ServiceHistory({ clientId }: ServiceHistoryProps) {
-  const entries = getServicesForClient(clientId);
+export async function ServiceHistory({ clientId }: ServiceHistoryProps) {
+  const supabase = await createClient();
+  let entries: ServiceEntry[];
+
+  if (supabase) {
+    const { data } = await supabase
+      .from("service_entries")
+      .select("*, service_types(name)")
+      .eq("client_id", clientId)
+      .order("service_date", { ascending: false });
+    entries = (data ?? []) as ServiceEntry[];
+  } else {
+    entries = getServicesForClient(clientId);
+  }
 
   return (
     <Card>

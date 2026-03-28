@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { ClientProfile } from "@/components/clients/client-profile";
+import { createClient } from "@/lib/supabase/server";
 import { getClientById } from "@/lib/data/demo";
 
 interface PageProps {
@@ -9,7 +10,17 @@ interface PageProps {
 
 export default async function ClientDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const client = getClientById(id);
+
+  const supabase = await createClient();
+  let client;
+
+  if (supabase) {
+    const { data } = await supabase.from("clients").select("*").eq("id", id).single();
+    client = data;
+  } else {
+    client = getClientById(id);
+  }
+
   if (!client) notFound();
 
   return (

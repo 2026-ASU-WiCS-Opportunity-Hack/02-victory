@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { VoiceRecorder } from "@/components/services/voice-recorder";
-import { demoServiceTypes } from "@/lib/data/demo";
 import type { StructuredNote } from "@/types";
 import { toast } from "sonner";
 import { buttonVariants } from "@/lib/button-variants";
@@ -24,14 +24,18 @@ import { cn } from "@/lib/utils";
 interface ServiceFormProps {
   clientId: string;
   clientLabel: string;
+  serviceTypes: string[];
 }
 
-export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
+export function ServiceForm({ clientId, clientLabel, serviceTypes }: ServiceFormProps) {
+  const router = useRouter();
   const [serviceType, setServiceType] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiMood, setAiMood] = useState<string | null>(null);
   const [actionItems, setActionItems] = useState<string[]>([]);
+  const [audioTranscript, setAudioTranscript] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (aiSummary) setNotes((prev) => prev || aiSummary);
@@ -42,7 +46,7 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
     setAiMood(data.mood_risk);
     setActionItems(data.action_items);
     if (data.service_type && !serviceType) {
-      const match = demoServiceTypes.find(
+      const match = serviceTypes.find(
         (t) => t.toLowerCase() === data.service_type.toLowerCase()
       );
       setServiceType(match ?? data.service_type);
@@ -50,9 +54,39 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
     toast.success("AI filled summary & action items — review before saving.");
   };
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    toast.success("Service entry saved (demo — wire Supabase insert).");
+    setPending(true);
+
+    const form = new FormData(e.currentTarget);
+
+    const res = await fetch("/api/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        service_type_name: serviceType,
+        service_date: form.get("svc_date"),
+        duration_minutes: form.get("duration") ? Number(form.get("duration")) : null,
+        notes,
+        ai_summary: aiSummary,
+        ai_action_items: actionItems,
+        ai_mood_risk: aiMood,
+        source: audioTranscript ? "voice" : "manual",
+        audio_transcript: audioTranscript,
+      }),
+    });
+
+    setPending(false);
+
+    if (res.ok) {
+      toast.success("Service entry saved.");
+      router.push(`/clients/${clientId}`);
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { error?: string }).error ?? "Failed to save entry.");
+    }
   }
 
   return (
@@ -70,7 +104,11 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
         </Link>
       </div>
 
-      <VoiceRecorder onStructuredNote={onStructured} serviceTypes={demoServiceTypes} />
+      <VoiceRecorder
+        onStructuredNote={onStructured}
+        serviceTypes={serviceTypes}
+        onTranscript={(t) => setAudioTranscript(t)}
+      />
 
       <Card>
         <CardHeader>
@@ -91,7 +129,7 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {demoServiceTypes.map((t) => (
+                  {serviceTypes.map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>
@@ -153,7 +191,9 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
             )}
 
             <div className="flex gap-3">
-              <Button type="submit">Save entry</Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Save entry"}
+              </Button>
               <Link href="/clients" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
               </Link>

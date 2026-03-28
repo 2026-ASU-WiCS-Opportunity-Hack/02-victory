@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { ServiceForm } from "@/components/services/service-form";
-import { getClientById } from "@/lib/data/demo";
+import { createClient } from "@/lib/supabase/server";
+import { getClientById, demoServiceTypes } from "@/lib/data/demo";
 
 interface PageProps {
   params: Promise<{ clientId: string }>;
@@ -9,7 +10,23 @@ interface PageProps {
 
 export default async function NewServicePage({ params }: PageProps) {
   const { clientId } = await params;
-  const client = getClientById(clientId);
+
+  const supabase = await createClient();
+  let client;
+  let serviceTypes: string[];
+
+  if (supabase) {
+    const [clientRes, typesRes] = await Promise.all([
+      supabase.from("clients").select("*").eq("id", clientId).single(),
+      supabase.from("service_types").select("name").eq("is_active", true).order("name"),
+    ]);
+    client = clientRes.data;
+    serviceTypes = typesRes.data?.map((t) => t.name) ?? demoServiceTypes;
+  } else {
+    client = getClientById(clientId);
+    serviceTypes = demoServiceTypes;
+  }
+
   if (!client) notFound();
 
   return (
@@ -22,6 +39,7 @@ export default async function NewServicePage({ params }: PageProps) {
         <ServiceForm
           clientId={client.id}
           clientLabel={`${client.first_name} ${client.last_name}`}
+          serviceTypes={serviceTypes}
         />
       </div>
     </>
