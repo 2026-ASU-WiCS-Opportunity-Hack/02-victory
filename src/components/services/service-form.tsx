@@ -56,15 +56,17 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
     toast.success("AI filled summary and action items — review before saving.");
   };
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
-    fetch("/api/services", {
+
+    const res = await fetch("/api/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         client_id: clientId,
         service_type: serviceType || null,
+        service_type_name: serviceType || null,
         service_date: serviceDate || null,
         duration_minutes: duration ? Number(duration) : null,
         notes,
@@ -74,16 +76,18 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
         source: transcript ? "voice" : "manual",
         audio_transcript: transcript,
       }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        toast.success("Service entry saved.");
-        router.push(`/clients/${clientId}`);
-      })
-      .catch(() => {
-        toast.error("Could not save.");
-        setPending(false);
-      });
+    });
+
+    setPending(false);
+
+    if (res.ok) {
+      toast.success("Service entry saved.");
+      router.push(`/clients/${clientId}`);
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { error?: string }).error ?? "Failed to save entry.");
+    }
   }
 
   return (
@@ -126,7 +130,7 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(serviceTypes ?? []).map((t) => (
+                  {serviceTypes.map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>

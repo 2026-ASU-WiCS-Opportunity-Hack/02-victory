@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
   FileBarChart,
   Sparkles,
   LogOut,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/lib/button-variants";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { createClient } from "@/lib/supabase/client";
+
+interface AppSidebarProps {
+  profile: { full_name: string; email: string; role: string } | null;
+}
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,8 +26,19 @@ const nav = [
   { href: "/reports", label: "Reports", icon: FileBarChart },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ profile }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    if (supabase) await supabase.auth.signOut();
+    router.push("/login");
+  }
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "CM";
 
   return (
     <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
@@ -68,23 +85,39 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/50 px-2 py-2">
           <Avatar className="size-9 border border-sidebar-border">
             <AvatarFallback className="bg-sidebar-primary/20 text-xs font-medium text-sidebar-primary">
-              CM
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">Case Manager</p>
-            <p className="truncate text-xs text-muted-foreground">Staff</p>
+            <p className="truncate text-sm font-medium">
+              {profile?.full_name ?? "Case Manager"}
+            </p>
+            <p className="truncate text-xs capitalize text-muted-foreground">
+              {profile?.role ?? "Staff"}
+            </p>
           </div>
-          <Link
-            href="/login"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon" }),
-              "text-sidebar-foreground"
-            )}
-            title="Sign out"
-          >
-            <LogOut className="size-4" />
-          </Link>
+          <div className="flex gap-1">
+            <Link
+              href="/profile"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "text-sidebar-foreground"
+              )}
+              title="Profile"
+            >
+              <UserCircle className="size-4" />
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "text-sidebar-foreground"
+              )}
+              title="Sign out"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
     </aside>

@@ -4,35 +4,60 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const typeName = body.service_type_name ?? body.service_type ?? null;
+    const {
+      client_id,
+      service_date,
+      duration_minutes,
+      notes,
+      ai_summary,
+      ai_action_items,
+      ai_mood_risk,
+      source,
+      audio_transcript,
+    } = body;
+
+    if (!client_id || !service_date) {
+      return NextResponse.json(
+        { error: "client_id and service_date required" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     if (!supabase) {
-      return NextResponse.json({ id: "demo-" + Date.now() });
+      return NextResponse.json({ id: crypto.randomUUID() });
     }
 
-    let serviceTypeId: string | null = null;
-    if (body.service_type) {
-      const { data: typeRow } = await supabase
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let service_type_id: string | null = null;
+    if (typeName) {
+      const { data: st } = await supabase
         .from("service_types")
         .select("id")
-        .eq("name", body.service_type)
+        .eq("name", typeName)
         .maybeSingle();
-      serviceTypeId = typeRow?.id ?? null;
+      service_type_id = st?.id ?? null;
     }
 
     const { data, error } = await supabase
       .from("service_entries")
       .insert({
-        client_id: body.client_id,
-        service_type_id: serviceTypeId,
-        service_date: body.service_date || new Date().toISOString(),
-        duration_minutes: body.duration_minutes,
-        notes: body.notes,
-        ai_summary: body.ai_summary,
-        ai_action_items: body.ai_action_items ?? [],
-        ai_mood_risk: body.ai_mood_risk,
-        source: body.source ?? "manual",
-        audio_transcript: body.audio_transcript,
+        client_id,
+        service_type_id,
+        staff_id: user?.id ?? null,
+        service_date,
+        duration_minutes: duration_minutes ?? null,
+        notes: notes || null,
+        ai_summary: ai_summary || null,
+        ai_action_items: ai_action_items ?? [],
+        ai_mood_risk: ai_mood_risk || null,
+        source: source ?? "manual",
+        audio_transcript: audio_transcript || null,
       })
       .select("id")
       .single();

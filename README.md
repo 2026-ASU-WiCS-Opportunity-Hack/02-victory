@@ -11,7 +11,7 @@
 - Tanmai Potla
 - Suma Mallu
 - Mrudula Eluri
-- ssoma11@asu.edu
+- Sanjana Soma
 
 ## Project Overview
 

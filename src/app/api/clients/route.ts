@@ -4,22 +4,36 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const { first_name, last_name, date_of_birth, phone, email, address } = body;
+
+    if (!first_name || !last_name) {
+      return NextResponse.json(
+        { error: "first_name and last_name required" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     if (!supabase) {
-      return NextResponse.json({ id: "demo-" + Date.now() });
+      return NextResponse.json({ id: crypto.randomUUID() });
     }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
       .from("clients")
       .insert({
-        first_name: body.first_name,
-        last_name: body.last_name,
-        date_of_birth: body.date_of_birth,
-        phone: body.phone,
-        email: body.email,
-        address: body.address,
+        first_name,
+        last_name,
+        date_of_birth: date_of_birth || null,
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
         demographics: body.demographics ?? {},
+        created_by: user?.id ?? null,
       })
       .select("id")
       .single();

@@ -13,11 +13,13 @@ export function ClientForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
+
     const form = new FormData(e.currentTarget);
-    fetch("/api/clients", {
+
+    const res = await fetch("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -28,16 +30,18 @@ export function ClientForm() {
         email: form.get("email") || null,
         address: form.get("address") || null,
       }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Save failed");
-        toast.success("Client saved.");
-        router.push("/clients");
-      })
-      .catch(() => {
-        toast.error("Could not save. Check Supabase connection.");
-        setPending(false);
-      });
+    });
+
+    setPending(false);
+
+    if (res.ok) {
+      const data = (await res.json()) as { id: string };
+      toast.success("Client saved.");
+      router.push(`/clients/${data.id}`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { error?: string }).error ?? "Failed to save client.");
+    }
   }
 
   return (

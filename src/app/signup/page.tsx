@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/lib/button-variants";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +22,9 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -47,11 +46,19 @@ export default function LoginPage() {
 
     const supabase = createClient();
     if (!supabase) {
-      router.push("/dashboard");
+      toast.error("Supabase is not configured.");
+      setPending(false);
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName },
+      },
+    });
+
     setPending(false);
 
     if (error) {
@@ -59,6 +66,7 @@ export default function LoginPage() {
       return;
     }
 
+    toast.success("Account created! Signing you in…");
     router.refresh();
     router.push("/dashboard");
   }
@@ -74,17 +82,30 @@ export default function LoginPage() {
           <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
             <HeartHandshake className="size-7" />
           </div>
-          <h1 className="mt-4 font-heading text-3xl tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to access your workspace.</p>
+          <h1 className="mt-4 font-heading text-3xl tracking-tight">Create account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Register to start managing cases.
+          </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-xl">Sign in</CardTitle>
-            <CardDescription>Use the email and password you registered with.</CardDescription>
+            <CardTitle className="font-heading text-xl">Sign up</CardTitle>
+            <CardDescription>Your account will have staff-level access by default.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full name</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  placeholder="Jane Smith"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -102,15 +123,16 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  placeholder="Min. 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
                   required
                 />
               </div>
               <Button type="submit" className="w-full" disabled={pending}>
-                {pending ? "Signing in…" : "Sign in"}
+                {pending ? "Creating account…" : "Create account"}
               </Button>
             </form>
             <div className="relative py-2 text-center text-xs text-muted-foreground">
@@ -126,21 +148,10 @@ export default function LoginPage() {
               <GoogleIcon />
               {googlePending ? "Redirecting…" : "Continue with Google"}
             </Button>
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ variant: "secondary" }), "inline-flex w-full justify-center")}
-            >
-              Continue to demo dashboard
-            </Link>
             <p className="text-center text-sm text-muted-foreground">
-              No account?{" "}
-              <Link href="/signup" className="underline underline-offset-4 hover:text-foreground">
-                Sign up
-              </Link>
-            </p>
-            <p className="text-center text-xs text-muted-foreground">
-              <Link href="/" className="underline underline-offset-4 hover:text-foreground">
-                Back to home
+              Already have an account?{" "}
+              <Link href="/login" className="underline underline-offset-4 hover:text-foreground">
+                Sign in
               </Link>
             </p>
           </CardContent>

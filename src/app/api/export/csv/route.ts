@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { demoClients } from "@/lib/data/demo";
+import { demoClients, demoServiceEntries } from "@/lib/data/demo";
 
 function csvCell(value: string) {
   if (/[",\n\r]/.test(value)) {
@@ -9,38 +9,58 @@ function csvCell(value: string) {
   return value;
 }
 
+type Row = {
+  client_id: string;
+  first_name: string;
+  last_name: string;
+  last_service_date: string;
+};
+
 export async function GET() {
   const supabase = await createClient();
-  let rows: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-  }[];
+  let rows: Row[];
 
   if (supabase) {
     const { data } = await supabase
       .from("clients")
-      .select("id, first_name, last_name, phone, email")
+      .select("id, first_name, last_name, service_entries(service_date)")
       .order("last_name");
-    rows = data ?? [];
+
+    rows = (data ?? []).map(
+      (c: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        service_entries?: { service_date: string }[];
+      }) => {
+        const entries = c.service_entries ?? [];
+        const dates = entries.map((e) => e.service_date).sort().reverse();
+        return {
+          client_id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          last_service_date: dates[0]?.split("T")[0] ?? "",
+        };
+      }
+    );
   } else {
-    rows = demoClients.map((c) => ({
-      id: c.id,
-      first_name: c.first_name,
-      last_name: c.last_name,
-      phone: c.phone,
-      email: c.email,
-    }));
+    rows = demoClients.map((c) => {
+      const entries = demoServiceEntries.filter((e) => e.client_id === c.id);
+      const dates = entries.map((e) => e.service_date).sort().reverse();
+      return {
+        client_id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        last_service_date: dates[0]?.split("T")[0] ?? "",
+      };
+    });
   }
 
-  const header = "id,first_name,last_name,phone,email";
-  const lines = rows.map(
-    (r) =>
-      [r.id, r.first_name, r.last_name, r.phone ?? "", r.email ?? ""]
-        .map((v) => csvCell(String(v)))
-        .join(",")
+  const header = "client_id,first_name,last_name,last_service_date";
+  const lines = rows.map((r) =>
+    [r.client_id, r.first_name, r.last_name, r.last_service_date]
+      .map((v) => csvCell(String(v)))
+      .join(",")
   );
   const csv = [header, ...lines].join("\n");
 
