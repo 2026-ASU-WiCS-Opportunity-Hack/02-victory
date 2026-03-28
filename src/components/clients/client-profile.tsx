@@ -99,7 +99,7 @@ export function ClientProfile({ client }: ClientProfileProps) {
               )}
               <Separator />
               <p className="text-xs text-muted-foreground">
-                Admin roles can edit or archive records when Supabase RLS is wired.
+                Additional program-specific fields can be added as your team configures the database.
               </p>
             </CardContent>
           </Card>

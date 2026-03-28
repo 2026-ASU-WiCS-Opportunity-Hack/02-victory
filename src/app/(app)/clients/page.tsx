@@ -1,16 +1,17 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { ClientList } from "@/components/clients/client-list";
-import { demoClients } from "@/lib/data/demo";
+import { getAllClients } from "@/lib/data/queries";
 
-export default function ClientsPage() {
+export default async function ClientsPage() {
+  const clients = await getAllClients();
   return (
     <>
       <AppHeader
         title="Clients"
-        description="Search and open client records. Data below is demo content until Supabase is configured."
+        description="Search and manage client records."
       />
       <div className="flex-1 px-6 py-8">
-        <ClientList clients={demoClients} />
+        <ClientList clients={clients} />
       </div>
     </>
   );

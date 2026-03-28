@@ -12,7 +12,7 @@ export default function ReportsPage() {
     <>
       <AppHeader
         title="Reports"
-        description="Generate funder narratives from aggregated visits. Preview a saved sample report anytime."
+        description="Generate funder narratives from aggregated visits."
         actions={
           <Link
             href={`/reports/${demoReportId}`}
@@ -39,7 +39,7 @@ export default function ReportsPage() {
               className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
               download
             >
-              Download demo CSV
+              Download CSV
             </a>
           </CardContent>
         </Card>

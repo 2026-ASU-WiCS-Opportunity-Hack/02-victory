@@ -23,9 +23,7 @@ export default function LoginPage() {
             <HeartHandshake className="size-7" />
           </div>
           <h1 className="mt-4 font-heading text-3xl tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Supabase Auth plugs in here — use demo access below for the hackathon UI.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to access your workspace.</p>
         </div>
 
         <Card>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { VoiceRecorder } from "@/components/services/voice-recorder";
-import { demoServiceTypes } from "@/lib/data/demo";
 import type { StructuredNote } from "@/types";
 import { toast } from "sonner";
 import { buttonVariants } from "@/lib/button-variants";
@@ -24,14 +24,20 @@ import { cn } from "@/lib/utils";
 interface ServiceFormProps {
   clientId: string;
   clientLabel: string;
+  serviceTypes?: string[];
 }
 
-export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
+export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: ServiceFormProps) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
   const [serviceType, setServiceType] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiMood, setAiMood] = useState<string | null>(null);
   const [actionItems, setActionItems] = useState<string[]>([]);
+  const [duration, setDuration] = useState("");
+  const [serviceDate, setServiceDate] = useState("");
+  const [transcript, setTranscript] = useState<string | null>(null);
 
   useEffect(() => {
     if (aiSummary) setNotes((prev) => prev || aiSummary);
@@ -42,17 +48,42 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
     setAiMood(data.mood_risk);
     setActionItems(data.action_items);
     if (data.service_type && !serviceType) {
-      const match = demoServiceTypes.find(
+      const match = serviceTypes.find(
         (t) => t.toLowerCase() === data.service_type.toLowerCase()
       );
       setServiceType(match ?? data.service_type);
     }
-    toast.success("AI filled summary & action items — review before saving.");
+    toast.success("AI filled summary and action items — review before saving.");
   };
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    toast.success("Service entry saved (demo — wire Supabase insert).");
+    setPending(true);
+    fetch("/api/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        service_type: serviceType || null,
+        service_date: serviceDate || null,
+        duration_minutes: duration ? Number(duration) : null,
+        notes,
+        ai_summary: aiSummary,
+        ai_action_items: actionItems,
+        ai_mood_risk: aiMood,
+        source: transcript ? "voice" : "manual",
+        audio_transcript: transcript,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        toast.success("Service entry saved.");
+        router.push(`/clients/${clientId}`);
+      })
+      .catch(() => {
+        toast.error("Could not save.");
+        setPending(false);
+      });
   }
 
   return (
@@ -70,13 +101,17 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
         </Link>
       </div>
 
-      <VoiceRecorder onStructuredNote={onStructured} serviceTypes={demoServiceTypes} />
+      <VoiceRecorder
+        onStructuredNote={onStructured}
+        onTranscript={setTranscript}
+        serviceTypes={serviceTypes}
+      />
 
       <Card>
         <CardHeader>
           <CardTitle className="font-heading text-xl">Service entry</CardTitle>
           <CardDescription>
-            Manual fields merge with AI output. Voice flow calls Groq Whisper + Llama via API routes.
+            Manual fields merge with AI output from voice capture when you use it.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,7 +126,7 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {demoServiceTypes.map((t) => (
+                  {(serviceTypes ?? []).map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>
@@ -103,11 +138,27 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="svc_date">Service date</Label>
-                <Input id="svc_date" name="svc_date" type="datetime-local" required />
+                <Input
+                  id="svc_date"
+                  name="svc_date"
+                  type="datetime-local"
+                  required
+                  value={serviceDate}
+                  onChange={(e) => setServiceDate(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="duration">Duration (minutes)</Label>
-                <Input id="duration" name="duration" type="number" min={5} step={5} placeholder="45" />
+                <Input
+                  id="duration"
+                  name="duration"
+                  type="number"
+                  min={5}
+                  step={5}
+                  placeholder="45"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
               </div>
             </div>
 
@@ -153,7 +204,9 @@ export function ServiceForm({ clientId, clientLabel }: ServiceFormProps) {
             )}
 
             <div className="flex gap-3">
-              <Button type="submit">Save entry</Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Save entry"}
+              </Button>
               <Link href="/clients" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
               </Link>

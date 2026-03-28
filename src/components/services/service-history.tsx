@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getServicesForClient } from "@/lib/data/demo";
+import { getServicesForClient } from "@/lib/data/queries";
 import { buttonVariants } from "@/lib/button-variants";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +21,8 @@ function formatServiceDate(iso: string) {
   });
 }
 
-export function ServiceHistory({ clientId }: ServiceHistoryProps) {
-  const entries = getServicesForClient(clientId);
+export async function ServiceHistory({ clientId }: ServiceHistoryProps) {
+  const entries = await getServicesForClient(clientId);
 
   return (
     <Card>

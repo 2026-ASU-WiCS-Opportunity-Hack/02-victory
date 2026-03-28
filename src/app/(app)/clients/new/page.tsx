@@ -6,7 +6,7 @@ export default function NewClientPage() {
     <>
       <AppHeader
         title="Register a client"
-        description="Capture intake fields mapped to your `clients` table."
+        description="Register a new client."
       />
       <div className="flex-1 px-6 py-8">
         <ClientForm />

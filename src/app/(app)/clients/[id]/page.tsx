@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { ClientProfile } from "@/components/clients/client-profile";
-import { getClientById } from "@/lib/data/demo";
+import { getClientById } from "@/lib/data/queries";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -9,7 +9,7 @@ interface PageProps {
 
 export default async function ClientDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const client = getClientById(id);
+  const client = await getClientById(id);
   if (!client) notFound();
 
   return (

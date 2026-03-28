@@ -12,6 +12,22 @@ const StatsCards = dynamic(
   }
 );
 
-export function StatsCardsLoader() {
-  return <StatsCards />;
+interface StatsCardsLoaderProps {
+  totalClients?: number;
+  totalEntries?: number;
+  totalHours?: number;
+}
+
+export function StatsCardsLoader({
+  totalClients,
+  totalEntries,
+  totalHours,
+}: StatsCardsLoaderProps) {
+  return (
+    <StatsCards
+      totalClients={totalClients}
+      totalEntries={totalEntries}
+      totalHours={totalHours}
+    />
+  );
 }

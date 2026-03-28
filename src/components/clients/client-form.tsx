@@ -16,20 +16,35 @@ export function ClientForm() {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
-    toast.success("Client saved (demo — connect Supabase to persist).");
-    setTimeout(() => {
-      setPending(false);
-      router.push("/clients");
-    }, 600);
+    const form = new FormData(e.currentTarget);
+    fetch("/api/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: form.get("first_name"),
+        last_name: form.get("last_name"),
+        date_of_birth: form.get("dob") || null,
+        phone: form.get("phone") || null,
+        email: form.get("email") || null,
+        address: form.get("address") || null,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Save failed");
+        toast.success("Client saved.");
+        router.push("/clients");
+      })
+      .catch(() => {
+        toast.error("Could not save. Check Supabase connection.");
+        setPending(false);
+      });
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-heading text-xl">New client</CardTitle>
-        <CardDescription>
-          Demographics sync to your Supabase `clients` table once configured.
-        </CardDescription>
+        <CardDescription>Register a new client.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid max-w-2xl gap-6">

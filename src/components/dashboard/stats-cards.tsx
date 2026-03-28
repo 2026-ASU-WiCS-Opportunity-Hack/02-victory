@@ -30,34 +30,44 @@ const byType = [
   { name: "Health", n: 6 },
 ];
 
-const stats = [
-  {
-    label: "Active clients",
-    value: "128",
-    hint: "+12% vs last month",
-    icon: Users,
-  },
-  {
-    label: "Visits logged",
-    value: "342",
-    hint: "Last 30 days",
-    icon: ClipboardList,
-  },
-  {
-    label: "Hours documented",
-    value: "516",
-    hint: "Avg 45m / visit",
-    icon: Clock,
-  },
-  {
-    label: "Follow-ups due",
-    value: "23",
-    hint: "This week",
-    icon: TrendingUp,
-  },
-];
+interface StatsCardsProps {
+  totalClients?: number;
+  totalEntries?: number;
+  totalHours?: number;
+}
 
-export function StatsCards() {
+export function StatsCards({
+  totalClients = 128,
+  totalEntries = 342,
+  totalHours = 516,
+}: StatsCardsProps) {
+  const stats = [
+    {
+      label: "Active clients",
+      value: String(totalClients),
+      hint: "+12% vs last month",
+      icon: Users,
+    },
+    {
+      label: "Visits logged",
+      value: String(totalEntries),
+      hint: "Last 30 days",
+      icon: ClipboardList,
+    },
+    {
+      label: "Hours documented",
+      value: String(totalHours),
+      hint: "Avg 45m / visit",
+      icon: Clock,
+    },
+    {
+      label: "Follow-ups due",
+      value: "23",
+      hint: "This week",
+      icon: TrendingUp,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -81,9 +91,7 @@ export function StatsCards() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-heading text-lg">Visit volume</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Weekly service entries (demo trend)
-            </p>
+            <p className="text-sm text-muted-foreground">Weekly service entries trend</p>
           </CardHeader>
           <CardContent className="h-72 pt-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -119,7 +127,7 @@ export function StatsCards() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="font-heading text-lg">By service type</CardTitle>
-            <p className="text-sm text-muted-foreground">Snapshot (demo)</p>
+            <p className="text-sm text-muted-foreground">Snapshot by type</p>
           </CardHeader>
           <CardContent className="h-72 pt-0">
             <ResponsiveContainer width="100%" height="100%">

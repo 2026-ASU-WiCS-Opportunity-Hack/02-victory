@@ -106,7 +106,7 @@ export function ClientList({ clients }: ClientListProps) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Showing {filtered.length} of {clients.length} records (demo data).
+        Showing {filtered.length} of {clients.length} records.
       </p>
     </div>
   );
