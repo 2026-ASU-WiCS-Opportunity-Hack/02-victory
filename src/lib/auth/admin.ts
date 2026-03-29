@@ -1,5 +1,58 @@
 import { createClient } from "@/lib/supabase/server";
 
+export type AppRole = "admin" | "staff" | "client";
+
+/** Full role + portal link for layout and middleware-style checks. */
+export async function getRoleContext(): Promise<{
+  role: AppRole | null;
+  clientId: string | null;
+  isStaff: boolean;
+  isClient: boolean;
+  userId: string | null;
+}> {
+  const supabase = await createClient();
+  if (!supabase) {
+    return {
+      role: null,
+      clientId: null,
+      isStaff: true,
+      isClient: false,
+      userId: null,
+    };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      role: null,
+      clientId: null,
+      isStaff: false,
+      isClient: false,
+      userId: null,
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, client_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const role = (profile?.role as AppRole | undefined) ?? null;
+  const isClient = role === "client";
+  const isStaff = role === "admin" || role === "staff";
+
+  return {
+    role,
+    clientId: (profile?.client_id as string | null) ?? null,
+    isStaff,
+    isClient,
+    userId: user.id,
+  };
+}
+
 export async function getAdminContext(): Promise<{
   isAdmin: boolean;
   userId: string | null;

@@ -1,18 +1,40 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit/log";
+import { getStaffContext } from "@/lib/auth/admin";
+import { createClientSchema } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { first_name, last_name, date_of_birth, phone, email, address } = body;
+    const { isStaff } = await getStaffContext();
+    if (!isStaff) {
+      return NextResponse.json({ error: "Only staff can create clients." }, { status: 403 });
+    }
 
-    if (!first_name || !last_name) {
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = createClientSchema.safeParse(raw);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "first_name and last_name required" },
+        { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const {
+      first_name,
+      last_name,
+      date_of_birth,
+      phone,
+      email,
+      address,
+      demographics,
+    } = parsed.data;
 
     const supabase = await createClient();
 
@@ -29,11 +51,11 @@ export async function POST(req: Request) {
       .insert({
         first_name,
         last_name,
-        date_of_birth: date_of_birth || null,
-        phone: phone || null,
-        email: email || null,
-        address: address || null,
-        demographics: body.demographics ?? {},
+        date_of_birth: date_of_birth ?? null,
+        phone: phone ?? null,
+        email: email ?? null,
+        address: address ?? null,
+        demographics: demographics ?? {},
         created_by: user?.id ?? null,
       })
       .select("id")

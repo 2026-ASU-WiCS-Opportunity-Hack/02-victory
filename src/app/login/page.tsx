@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { ensureProfileRow } from "@/lib/auth/ensure-profile";
 
 function GoogleIcon() {
   return (
@@ -59,12 +60,52 @@ export default function LoginPage() {
     setPending(false);
 
     if (error) {
-      toast.error(error.message);
+      const raw = error.message;
+      const msg = raw.toLowerCase();
+      if (msg.includes("email not confirmed") || msg.includes("confirm")) {
+        toast.error("Confirm your email first, then try signing in again.");
+      } else if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
+        toast.error(
+          "Invalid email or password. Run the demo seed so test accounts exist: POST /api/dev/seed (local) or POST /api/admin/seed with SEED_SECRET."
+        );
+      } else if (msg.includes("database error") || msg.includes("querying schema")) {
+        toast.error(
+          "Auth database error (often NULL token fields in auth.users or a bad trigger). See README “Auth troubleshooting” and run supabase/scripts/fix_auth_null_tokens.sql if needed."
+        );
+      } else {
+        toast.error(raw);
+      }
       return;
     }
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Signed in but session was not established. Try again.");
+      return;
+    }
+
+    const ensured = await ensureProfileRow(supabase, user);
+    if (ensured.error) {
+      console.error("ensureProfileRow:", ensured.error);
+      toast.error(
+        "Signed in, but your profile row is missing. Ask an admin to run the latest database migration, or contact support."
+      );
+    }
+
+    let nextPath = "/dashboard";
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (prof?.role === "client") {
+      nextPath = "/portal";
+    }
+
     router.refresh();
-    router.push("/dashboard");
+    router.push(nextPath);
   }
 
   return (

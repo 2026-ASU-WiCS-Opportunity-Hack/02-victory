@@ -51,11 +51,12 @@ export default function SignupPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
+        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
       },
     });
 
@@ -63,6 +64,12 @@ export default function SignupPage() {
 
     if (error) {
       toast.error(error.message);
+      return;
+    }
+
+    if (data.user && !data.session) {
+      toast.success("Check your email to confirm your account, then sign in.");
+      router.push("/login");
       return;
     }
 

@@ -1,10 +1,12 @@
-export type ProfileRole = "admin" | "staff";
+export type ProfileRole = "admin" | "staff" | "client";
 
 export interface Profile {
   id: string;
   full_name: string;
   role: ProfileRole;
   email: string;
+  /** When role is client, links this login to a row in `clients`. */
+  client_id?: string | null;
   created_at?: string;
 }
 
@@ -43,6 +45,8 @@ export interface ServiceEntry {
   source: "manual" | "voice";
   audio_transcript: string | null;
   service_types?: { name: string } | null;
+  /** Resolved from profiles when available */
+  staff_profile?: { full_name: string } | null;
 }
 
 export interface StructuredNote {

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { structureNotes } from "@/lib/ai/groq";
 import type { StructuredNote } from "@/types";
+import { getStaffContext } from "@/lib/auth/admin";
+import { guardAiRate } from "@/lib/ai-guard";
+import { aiStructureNotesSchema } from "@/lib/validation/schemas";
 
 const DEMO: StructuredNote = {
   summary:
@@ -18,13 +21,30 @@ const DEMO: StructuredNote = {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const transcript = body.transcript as string | undefined;
-    const serviceTypes = (body.serviceTypes as string[]) ?? [];
-
-    if (!transcript) {
-      return NextResponse.json({ error: "No transcript" }, { status: 400 });
+    const { isStaff, userId } = await getStaffContext();
+    if (!isStaff) {
+      return NextResponse.json({ error: "Only staff can structure notes." }, { status: 403 });
     }
+
+    const rate = guardAiRate(req, userId, 45);
+    if (rate) return rate;
+
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = aiStructureNotesSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { transcript, serviceTypes = [] } = parsed.data;
 
     try {
       const structured = await structureNotes(transcript, serviceTypes);

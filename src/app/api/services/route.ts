@@ -1,10 +1,32 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit/log";
+import { getStaffContext } from "@/lib/auth/admin";
+import { createServiceSchema } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const { isStaff } = await getStaffContext();
+    if (!isStaff) {
+      return NextResponse.json({ error: "Only staff can log services." }, { status: 403 });
+    }
+
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = createServiceSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const body = parsed.data;
     const typeName = body.service_type_name ?? body.service_type ?? null;
     const {
       client_id,
@@ -17,14 +39,8 @@ export async function POST(req: Request) {
       source,
       audio_transcript,
       custom_fields,
+      staff_id: requestedStaffId,
     } = body;
-
-    if (!client_id || !service_date) {
-      return NextResponse.json(
-        { error: "client_id and service_date required" },
-        { status: 400 }
-      );
-    }
 
     const supabase = await createClient();
 
@@ -35,6 +51,18 @@ export async function POST(req: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    let staffId: string | null = user?.id ?? null;
+    if (requestedStaffId) {
+      const { data: target } = await supabase
+        .from("profiles")
+        .select("id, role")
+        .eq("id", requestedStaffId)
+        .maybeSingle();
+      if (target && (target.role === "admin" || target.role === "staff")) {
+        staffId = target.id;
+      }
+    }
 
     let service_type_id: string | null = null;
     if (typeName) {
@@ -56,7 +84,7 @@ export async function POST(req: Request) {
       .insert({
         client_id,
         service_type_id,
-        staff_id: user?.id ?? null,
+        staff_id: staffId,
         service_date,
         duration_minutes: duration_minutes ?? null,
         notes: notes || null,

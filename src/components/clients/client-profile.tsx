@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Calendar, Mail, MapPin, Phone, Mic, Fingerprint } from "lucide-react";
-import { ClientIdCopy } from "@/components/clients/client-id-copy";
+import { Calendar, Mail, MapPin, Phone, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,33 +12,29 @@ import { cn } from "@/lib/utils";
 
 interface ClientProfileProps {
   client: Client;
+  /** Portal accounts: read-only view, no staff tools. */
+  variant?: "staff" | "portal";
 }
 
 function formatDemoKey(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function ClientProfile({ client }: ClientProfileProps) {
+export function ClientProfile({ client, variant = "staff" }: ClientProfileProps) {
   const demo = (client.demographics ?? {}) as Record<string, unknown>;
+  const isPortal = variant === "portal";
 
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-3">
-            <p className="text-sm font-medium text-primary">Client record</p>
+            <p className="text-sm font-medium text-primary">
+              {isPortal ? "Your record" : "Client record"}
+            </p>
             <CardTitle className="mt-1 font-heading text-3xl tracking-tight">
               {client.first_name} {client.last_name}
             </CardTitle>
-            <div className="flex items-start gap-2 rounded-lg border border-border/80 bg-background/60 p-3">
-              <Fingerprint className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Unique client ID
-                </p>
-                <ClientIdCopy id={client.id} />
-              </div>
-            </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <Badge variant="secondary">Active</Badge>
               {client.date_of_birth ? (
@@ -47,13 +42,15 @@ export function ClientProfile({ client }: ClientProfileProps) {
               ) : null}
             </div>
           </div>
-          <Link
-            href={`/services/new/${client.id}`}
-            className={cn(buttonVariants({ size: "lg" }), "gap-2 shrink-0")}
-          >
-            <Mic className="size-4" />
-            Log service / voice
-          </Link>
+          {!isPortal ? (
+            <Link
+              href={`/services/new/${client.id}`}
+              className={cn(buttonVariants({ size: "lg" }), "gap-2 shrink-0")}
+            >
+              <Mic className="size-4" />
+              Log service / voice
+            </Link>
+          ) : null}
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex gap-3 rounded-lg border border-border/80 bg-background/60 p-3">
@@ -89,7 +86,7 @@ export function ClientProfile({ client }: ClientProfileProps) {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="flex-wrap gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="summary">Client summary</TabsTrigger>
+          {!isPortal ? <TabsTrigger value="summary">Client summary</TabsTrigger> : null}
           <TabsTrigger value="services">Service history</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4 space-y-4">
@@ -120,11 +117,13 @@ export function ClientProfile({ client }: ClientProfileProps) {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="summary" className="mt-4">
-          <ClientSummaryPanel clientId={client.id} />
-        </TabsContent>
+        {!isPortal ? (
+          <TabsContent value="summary" className="mt-4">
+            <ClientSummaryPanel clientId={client.id} />
+          </TabsContent>
+        ) : null}
         <TabsContent value="services" className="mt-4">
-          <ServiceHistory clientId={client.id} />
+          <ServiceHistory clientId={client.id} showAddEntry={!isPortal} />
         </TabsContent>
       </Tabs>
     </div>

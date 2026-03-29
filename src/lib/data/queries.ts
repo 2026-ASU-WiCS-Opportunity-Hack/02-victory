@@ -281,9 +281,9 @@ export async function getClientById(id: string): Promise<Client | null> {
     .from("clients")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return getDemoClient(id) ?? null;
+  if (error || !data) return null;
   return data as Client;
 }
 
@@ -297,20 +297,43 @@ export async function getServicesForClient(clientId: string): Promise<ServiceEnt
     .eq("client_id", clientId)
     .order("service_date", { ascending: false });
 
-  if (error || !data) return getDemoServices(clientId);
-  return data as ServiceEntry[];
+  if (error || !data) return [];
+
+  const staffIds = [...new Set(data.map((e) => e.staff_id).filter(Boolean))] as string[];
+  let nameById: Record<string, string> = {};
+  if (staffIds.length > 0) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", staffIds);
+    nameById = Object.fromEntries((profs ?? []).map((p) => [p.id, p.full_name]));
+  }
+
+  return data.map((e) => {
+    const sid = e.staff_id as string | null;
+    return {
+      ...e,
+      staff_profile:
+        sid && nameById[sid] ? { full_name: nameById[sid] } : null,
+    } as ServiceEntry;
+  });
 }
 
 export async function getServiceTypes(): Promise<string[]> {
   const supabase = await createClient();
   if (!supabase) return demoServiceTypes;
 
-  const { data, error } = await supabase
+  const withActive = await supabase
     .from("service_types")
     .select("name")
     .eq("is_active", true)
     .order("name");
 
+  if (!withActive.error && withActive.data) {
+    return withActive.data.map((r) => r.name);
+  }
+
+  const { data, error } = await supabase.from("service_types").select("name").order("name");
   if (error || !data) return demoServiceTypes;
   return data.map((r) => r.name);
 }

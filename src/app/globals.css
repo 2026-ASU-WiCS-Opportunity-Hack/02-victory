@@ -121,6 +121,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
   body {
     @apply bg-background text-foreground;
   }
@@ -198,4 +201,27 @@
   body {
     background: white !important;
   }
+}
+
+/* Skip link: off-screen until keyboard focus (no dependency on tailwind sr-only variants). */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  text-decoration: none;
+}
+.skip-to-main:focus,
+.skip-to-main:focus-visible {
+  left: 1rem;
+  top: 1rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

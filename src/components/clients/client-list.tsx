@@ -33,7 +33,7 @@ export function ClientList({ clients }: ClientListProps) {
     if (!s) return clients;
     return clients.filter((c) => {
       const blob =
-        `${c.first_name} ${c.last_name} ${c.email ?? ""} ${c.phone ?? ""} ${c.id}`.toLowerCase();
+        `${c.first_name} ${c.last_name} ${c.email ?? ""} ${c.phone ?? ""}`.toLowerCase();
       return blob.includes(s);
     });
   }, [clients, q]);

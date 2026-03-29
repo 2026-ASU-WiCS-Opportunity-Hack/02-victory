@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileBarChart, Sparkles, CalendarDays, ScrollText, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, Users, FileBarChart, Sparkles, CalendarDays, ScrollText, SlidersHorizontal, Home, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -14,20 +14,31 @@ const nav = [
 
 const adminNav = [
   { href: "/admin/audit", label: "Admin", icon: ScrollText },
+  { href: "/admin/service-types", label: "Types", icon: Tags },
   { href: "/fields", label: "Fields", icon: SlidersHorizontal },
 ];
 
-export function AppMobileNav({ isAdmin, isStaffOrAdmin }: { isAdmin?: boolean; isStaffOrAdmin?: boolean }) {
+const portalNav = [{ href: "/portal", label: "My record", icon: Home }];
+
+export function AppMobileNav({
+  isAdmin,
+  isClientPortal,
+}: {
+  isAdmin?: boolean;
+  isClientPortal?: boolean;
+}) {
   const pathname = usePathname();
+  const items = isClientPortal ? portalNav : nav;
 
   return (
     <nav className="no-print flex items-center gap-1 border-b border-border bg-background px-4 py-2 md:hidden">
       <div className="mr-2 flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
         <Sparkles className="size-4" />
       </div>
-      {nav.map(({ href, label, icon: Icon }) => {
-        const active =
-          pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+      {items.map(({ href, label, icon: Icon }) => {
+        const active = isClientPortal
+          ? pathname === "/portal" || pathname.startsWith("/portal/")
+          : pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
         return (
           <Link
             key={href}
@@ -44,7 +55,7 @@ export function AppMobileNav({ isAdmin, isStaffOrAdmin }: { isAdmin?: boolean; i
           </Link>
         );
       })}
-      {isAdmin &&
+      {!isClientPortal && isAdmin &&
         adminNav.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           return (

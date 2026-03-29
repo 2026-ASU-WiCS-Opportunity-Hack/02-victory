@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { generateFunderReport } from "@/lib/ai/groq";
 import { demoServiceEntries } from "@/lib/data/demo";
 import type { ReportData } from "@/lib/ai/groq";
+import { getStaffContext } from "@/lib/auth/admin";
+import { guardAiRate } from "@/lib/ai-guard";
+import { aiReportPeriodSchema } from "@/lib/validation/schemas";
 
 function aggregateFromDemo(period_start: string, period_end: string): ReportData {
   const start = new Date(period_start).getTime();
@@ -61,10 +64,30 @@ const FALLBACK_REPORT = {
 
 export async function POST(req: Request) {
   try {
-    const { period_start, period_end } = await req.json();
-    if (!period_start || !period_end) {
-      return NextResponse.json({ error: "period_start and period_end required" }, { status: 400 });
+    const { isStaff, userId } = await getStaffContext();
+    if (!isStaff) {
+      return NextResponse.json({ error: "Only staff can generate reports." }, { status: 403 });
     }
+
+    const rate = guardAiRate(req, userId, 15);
+    if (rate) return rate;
+
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const parsed = aiReportPeriodSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { period_start, period_end } = parsed.data;
 
     const supabase = await createClient();
     let aggregated: ReportData;

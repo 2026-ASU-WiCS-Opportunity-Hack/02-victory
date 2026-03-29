@@ -49,6 +49,28 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
   const [serviceDate, setServiceDate] = useState("");
   const [followUpDate, setFollowUpDate] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [staffList, setStaffList] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [staffId, setStaffId] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/staff")
+      .then((r) => r.json())
+      .then(
+        (d: {
+          staff?: { id: string; full_name: string; email: string }[];
+          currentUserId?: string | null;
+        }) => {
+          const list = d.staff ?? [];
+          setStaffList(list);
+          if (d.currentUserId && list.some((s) => s.id === d.currentUserId)) {
+            setStaffId(d.currentUserId);
+          } else if (list[0]) {
+            setStaffId(list[0].id);
+          }
+        }
+      )
+      .catch(() => setStaffList([]));
+  }, []);
 
   useEffect(() => {
     fetch("/api/custom-fields?applies_to=service")
@@ -104,6 +126,7 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
         ai_mood_risk: aiMood,
         source: transcript ? "voice" : "manual",
         audio_transcript: transcript,
+        ...(staffId ? { staff_id: staffId } : {}),
         ...(Object.keys(custom_fields).length > 0 ? { custom_fields } : {}),
       }),
     });
@@ -134,7 +157,6 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
             Logging for{" "}
             <span className="font-medium text-foreground">{clientLabel}</span>
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Client ID: {clientId}</p>
         </div>
         <Link href={`/clients/${clientId}`} className={cn(buttonVariants({ variant: "outline" }))}>
           Back to profile
@@ -151,11 +173,34 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
         <CardHeader>
           <CardTitle className="font-heading text-xl">Service entry</CardTitle>
           <CardDescription>
-            Fill in details below. Voice capture auto-fills summary and action items.
+            Record who provided the visit, then fill details. Voice capture auto-fills summary and action items.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="grid max-w-2xl gap-6">
+            <div className="space-y-2">
+              <Label>Staff member</Label>
+              <Select value={staffId} onValueChange={(v) => setStaffId(v ?? "")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffList.map((s) => (
+                    <SelectItem
+                      key={s.id}
+                      value={s.id}
+                      label={`${s.full_name} (${s.email})`}
+                    >
+                      {s.full_name} ({s.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Defaults to you; change if another team member delivered this visit.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Service type</Label>
               <Select

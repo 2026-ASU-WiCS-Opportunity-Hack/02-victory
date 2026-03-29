@@ -2,14 +2,28 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getClientById, getServicesForClient } from "@/lib/data/queries";
 import { generateClientSummary } from "@/lib/ai/groq";
+import { getRoleContext } from "@/lib/auth/admin";
+import { guardAiRate } from "@/lib/ai-guard";
+import { aiClientSummarySchema } from "@/lib/validation/schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const client_id = body.client_id as string | undefined;
-    if (!client_id) {
-      return NextResponse.json({ error: "client_id required" }, { status: 400 });
+    let raw: unknown;
+    try {
+      raw = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
+
+    const parsed = aiClientSummarySchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { client_id } = parsed.data;
 
     const supabase = await createClient();
     if (supabase) {
@@ -19,6 +33,18 @@ export async function POST(req: Request) {
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
+    }
+
+    const ctx = await getRoleContext();
+    const rate = guardAiRate(req, ctx.userId, 25);
+    if (rate) return rate;
+
+    if (ctx.isClient) {
+      if (!ctx.clientId || ctx.clientId !== client_id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if (!ctx.isStaff) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const client = await getClientById(client_id);

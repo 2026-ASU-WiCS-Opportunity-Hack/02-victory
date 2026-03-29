@@ -75,7 +75,7 @@ export function AppointmentForm({
               </SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
+                  <SelectItem key={c.id} value={c.id} label={c.label}>
                     {c.label}
                   </SelectItem>
                 ))}

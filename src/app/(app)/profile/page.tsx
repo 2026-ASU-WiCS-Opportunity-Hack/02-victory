@@ -18,7 +18,25 @@ export default async function ProfilePage() {
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (!profile) {
+    return (
+      <>
+        <AppHeader title="Profile" description="Account setup" />
+        <div className="flex-1 px-6 py-8">
+          <p className="max-w-lg text-sm text-muted-foreground">
+            No profile row for this account yet. Run the demo seed (see README) or ask an admin to link your auth user in the{" "}
+            <code className="rounded bg-muted px-1">profiles</code> table.
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  if (profile?.role === "client") {
+    redirect("/portal");
+  }
 
   return (
     <>

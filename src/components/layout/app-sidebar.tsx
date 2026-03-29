@@ -12,6 +12,8 @@ import {
   CalendarDays,
   ScrollText,
   SlidersHorizontal,
+  Home,
+  Tags,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/lib/button-variants";
@@ -22,7 +24,8 @@ import { createClient } from "@/lib/supabase/client";
 interface AppSidebarProps {
   profile: { full_name: string; email: string; role: string } | null;
   isAdmin?: boolean;
-  isStaffOrAdmin?: boolean;
+  /** Logged-in client (portal) — show only their record, not staff tools. */
+  isClientPortal?: boolean;
 }
 
 const nav = [
@@ -35,10 +38,13 @@ const nav = [
 // Visible to admins only
 const adminNav = [
   { href: "/admin/audit", label: "Audit log", icon: ScrollText },
+  { href: "/admin/service-types", label: "Service types", icon: Tags },
   { href: "/fields", label: "Custom fields", icon: SlidersHorizontal },
 ];
 
-export function AppSidebar({ profile, isAdmin, isStaffOrAdmin }: AppSidebarProps) {
+const portalNav = [{ href: "/portal", label: "My record", icon: Home }];
+
+export function AppSidebar({ profile, isAdmin, isClientPortal }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -68,20 +74,22 @@ export function AppSidebar({ profile, isAdmin, isStaffOrAdmin }: AppSidebarProps
       <Separator className="bg-sidebar-border" />
 
       <nav className="flex flex-1 flex-col gap-0.5 p-3">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {(isClientPortal ? portalNav : nav).map(({ href, label, icon: Icon }) => {
           const active =
-            pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+            pathname === href || (href !== "/dashboard" && href !== "/portal" && pathname.startsWith(href));
+          const portalActive = isClientPortal && (pathname === "/portal" || pathname.startsWith("/portal"));
+          const isActive = isClientPortal && href === "/portal" ? portalActive : active;
           return (
             <Link
               key={href}
               href={href}
               className={cn(
                 buttonVariants({
-                  variant: active ? "secondary" : "ghost",
+                  variant: isActive ? "secondary" : "ghost",
                   size: "default",
                   className: "w-full justify-start gap-2 text-sidebar-foreground",
                 }),
-                active &&
+                isActive &&
                   "bg-sidebar-accent text-sidebar-accent-foreground border border-sidebar-border"
               )}
             >
@@ -90,7 +98,7 @@ export function AppSidebar({ profile, isAdmin, isStaffOrAdmin }: AppSidebarProps
             </Link>
           );
         })}
-        {isAdmin &&
+        {!isClientPortal && isAdmin &&
           adminNav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href);
             return (
@@ -126,10 +134,11 @@ export function AppSidebar({ profile, isAdmin, isStaffOrAdmin }: AppSidebarProps
               {profile?.full_name ?? "Case Manager"}
             </p>
             <p className="text-xs capitalize text-muted-foreground">
-              {profile?.role ?? "Staff"}
+              {isClientPortal ? "Client" : profile?.role ?? "Staff"}
             </p>
           </div>
           <div className="flex gap-1">
+            {!isClientPortal ? (
             <Link
               href="/profile"
               className={cn(
@@ -140,6 +149,7 @@ export function AppSidebar({ profile, isAdmin, isStaffOrAdmin }: AppSidebarProps
             >
               <UserCircle className="size-4" />
             </Link>
+            ) : null}
             <button
               onClick={handleSignOut}
               className={cn(

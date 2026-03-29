@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 interface ServiceHistoryProps {
   clientId: string;
+  /** When false, hides staff-only “Add entry” (e.g. client portal). Default true. */
+  showAddEntry?: boolean;
 }
 
 function formatServiceDate(iso: string) {
@@ -21,19 +23,21 @@ function formatServiceDate(iso: string) {
   });
 }
 
-export async function ServiceHistory({ clientId }: ServiceHistoryProps) {
+export async function ServiceHistory({ clientId, showAddEntry = true }: ServiceHistoryProps) {
   const entries = await getServicesForClient(clientId);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="font-heading text-lg">Recent visits</CardTitle>
-        <Link
-          href={`/services/new/${clientId}`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Add entry
-        </Link>
+        {showAddEntry ? (
+          <Link
+            href={`/services/new/${clientId}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Add entry
+          </Link>
+        ) : null}
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
@@ -59,11 +63,12 @@ export async function ServiceHistory({ clientId }: ServiceHistoryProps) {
                       </Badge>
                     </div>
                   </div>
-                  {e.duration_minutes != null ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Duration {e.duration_minutes} min
-                    </p>
-                  ) : null}
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {e.duration_minutes != null ? <span>Duration {e.duration_minutes} min</span> : null}
+                    {e.staff_profile?.full_name ? (
+                      <span>Staff: {e.staff_profile.full_name}</span>
+                    ) : null}
+                  </div>
                   <p className="mt-2 text-sm leading-relaxed text-foreground/90">
                     {e.notes ?? e.audio_transcript ?? "—"}
                   </p>
