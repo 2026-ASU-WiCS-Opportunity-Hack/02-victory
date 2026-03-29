@@ -28,7 +28,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar profile={profile} isAdmin={isAdmin} />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
         <AppMobileNav isAdmin={isAdmin} />
-        <div className="flex min-h-0 flex-1 flex-col bg-background">{children}</div>
+        <main
+          id="main-content"
+          className="flex min-h-0 flex-1 flex-col bg-background outline-none"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

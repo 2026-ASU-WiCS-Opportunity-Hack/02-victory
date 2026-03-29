@@ -138,6 +138,7 @@ export function VoiceRecorder({
 
         {statusMessages[status] ? (
           <span
+            aria-live="polite"
             className={`text-sm ${
               status === "recording"
                 ? "animate-pulse text-red-600"
@@ -146,7 +147,10 @@ export function VoiceRecorder({
                   : "text-muted-foreground"
             }`}
           >
-            {status === "recording" ? "● " : null}
+            {status === "recording" ? <span aria-hidden="true">● </span> : null}
+            <span className="sr-only">
+              {status === "recording" ? "Recording in progress: " : "Status: "}
+            </span>
             {statusMessages[status]}
           </span>
         ) : null}
