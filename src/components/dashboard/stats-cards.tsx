@@ -12,7 +12,15 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, CalendarDays, CalendarRange, CalendarClock, ClipboardList } from "lucide-react";
+import {
+  Users,
+  CalendarDays,
+  CalendarRange,
+  CalendarClock,
+  ClipboardList,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 
 interface StatsCardsProps {
   activeClients?: number;
@@ -24,6 +32,11 @@ interface StatsCardsProps {
   totalHours?: number;
   weeklyTrend?: { w: string; visits: number }[];
   servicesByType?: { name: string; n: number }[];
+  // Period-specific
+  isFiltered?: boolean;
+  servicesPeriod?: number;
+  hoursPeriod?: number;
+  activeClientsPeriod?: number;
 }
 
 export function StatsCards({
@@ -36,8 +49,44 @@ export function StatsCards({
   totalHours = 0,
   weeklyTrend = [],
   servicesByType = [],
+  isFiltered = false,
+  servicesPeriod = 0,
+  hoursPeriod = 0,
+  activeClientsPeriod = 0,
 }: StatsCardsProps) {
-  const stats = [
+  const avgPerClient =
+    activeClientsPeriod > 0
+      ? Math.round((servicesPeriod / activeClientsPeriod) * 10) / 10
+      : 0;
+
+  const periodStats = [
+    {
+      label: "Clients served",
+      value: String(activeClientsPeriod),
+      hint: "Unique clients with a visit in this period",
+      icon: Users,
+    },
+    {
+      label: "Services in period",
+      value: String(servicesPeriod),
+      hint: "Total service entries logged",
+      icon: ClipboardList,
+    },
+    {
+      label: "Hours in period",
+      value: String(hoursPeriod),
+      hint: "Total documented service hours",
+      icon: Clock,
+    },
+    {
+      label: "Avg sessions / client",
+      value: String(avgPerClient),
+      hint: "Average visits per client served",
+      icon: TrendingUp,
+    },
+  ];
+
+  const allTimeStats = [
     {
       label: "Active clients",
       value: String(activeClients),
@@ -63,6 +112,8 @@ export function StatsCards({
       icon: CalendarClock,
     },
   ];
+
+  const stats = isFiltered ? periodStats : allTimeStats;
 
   return (
     <div className="space-y-6">
@@ -149,7 +200,7 @@ export function StatsCards({
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="font-heading text-lg">By service type</CardTitle>
-            <p className="text-sm text-muted-foreground">Share of visits in the last 6 rolling weeks</p>
+            <p className="text-sm text-muted-foreground">Share of visits in the selected period</p>
           </CardHeader>
           <CardContent className="h-72 pt-0">
             {servicesByType.length === 0 ? (

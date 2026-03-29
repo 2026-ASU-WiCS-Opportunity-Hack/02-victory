@@ -53,8 +53,7 @@ export function ReportGenerator() {
         <CardHeader>
           <CardTitle className="font-heading text-xl">Funder-ready narrative</CardTitle>
           <CardDescription>
-            Aggregates service data for the period, then drafts narrative sections you can edit before export or
-            filing.
+            Select a date range to generate a funder-ready narrative from your service data.
           </CardDescription>
         </CardHeader>
         <CardContent>

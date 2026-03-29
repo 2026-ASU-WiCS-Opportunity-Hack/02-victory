@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
-import { StatsCardsLoader } from "@/components/dashboard/stats-cards-loader";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DashboardPrintToolbar } from "@/components/dashboard/dashboard-print-toolbar";
 import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders";
 import { getDashboardStats, getUpcomingAppointmentReminders } from "@/lib/data/queries";
@@ -9,8 +9,12 @@ import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
+  // Load initial stats (last 90 days matches the shell's default preset)
+  const defaultEnd = new Date();
+  const defaultStart = new Date(Date.now() - 90 * 86400000);
+
   const [stats, reminders] = await Promise.all([
-    getDashboardStats(),
+    getDashboardStats(defaultStart, defaultEnd),
     getUpcomingAppointmentReminders(72),
   ]);
 
@@ -29,25 +33,17 @@ export default async function DashboardPage() {
           </div>
         }
       />
-      <div className="dashboard-print-area flex-1 space-y-8 px-6 py-8">
-        <div className="print-only mb-4 border-b border-border pb-4">
+      <div className="dashboard-print-area space-y-0">
+        <div className="print-only mb-4 border-b border-border px-6 pb-4 pt-8">
           <p className="font-heading text-xl">Victory — Dashboard report</p>
           <p className="text-sm text-muted-foreground">
             Generated from live metrics. Use your browser print dialog to save as PDF.
           </p>
         </div>
-        <UpcomingReminders items={reminders} />
-        <StatsCardsLoader
-          activeClients={stats.activeClients}
-          totalRegistered={stats.totalRegistered}
-          servicesWeek={stats.servicesWeek}
-          servicesMonth={stats.servicesMonth}
-          servicesQuarter={stats.servicesQuarter}
-          totalEntries={stats.totalEntries}
-          totalHours={stats.totalHours}
-          weeklyTrend={stats.weeklyTrend}
-          servicesByType={stats.servicesByType}
-        />
+        <div className="px-6 py-4">
+          <UpcomingReminders items={reminders} />
+        </div>
+        <DashboardShell initialStats={stats} />
       </div>
     </>
   );

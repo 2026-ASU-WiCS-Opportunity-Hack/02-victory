@@ -45,6 +45,10 @@ export type DashboardStats = {
   totalHours: number;
   weeklyTrend: { w: string; visits: number }[];
   servicesByType: { name: string; n: number }[];
+  // Period-specific (set when a date range is active)
+  servicesPeriod: number;
+  hoursPeriod: number;
+  activeClientsPeriod: number;
 };
 
 function ymd(iso: string): string {
@@ -91,12 +95,45 @@ type ChartEntry = {
 const CHART_WEEKS = 6;
 const ACTIVE_DAYS = 90;
 
+function filterEntriesInRange(
+  entries: ChartEntry[],
+  start?: Date,
+  end?: Date
+): ChartEntry[] {
+  if (!start && !end) return entries;
+  return entries.filter((e) => {
+    const t = new Date(e.service_date).getTime();
+    if (start && t < start.getTime()) return false;
+    if (end && t > end.getTime()) return false;
+    return true;
+  });
+}
+
 function filterEntriesLastWeeks(entries: ChartEntry[], weeks: number): ChartEntry[] {
   const cutoff = Date.now() - weeks * 7 * 86400000;
   return entries.filter((e) => new Date(e.service_date).getTime() >= cutoff);
 }
 
-function buildWeeklyTrend(entries: ChartEntry[]) {
+function buildWeeklyTrend(entries: ChartEntry[], start?: Date, end?: Date) {
+  // When a custom range is provided, build week buckets for that range.
+  // Otherwise fall back to the rolling CHART_WEEKS window.
+  if (start && end) {
+    const rangeMs = end.getTime() - start.getTime();
+    const weeks = Math.max(1, Math.ceil(rangeMs / (7 * 86400000)));
+    const cappedWeeks = Math.min(weeks, 26); // cap at 26 weeks for readability
+    const scoped = filterEntriesInRange(entries, start, end);
+    return Array.from({ length: cappedWeeks }, (_, i) => {
+      const weekStart = start.getTime() + i * 7 * 86400000;
+      const weekEnd = weekStart + 7 * 86400000;
+      const date = new Date(weekStart);
+      const label = `Week of ${date.getMonth() + 1}/${date.getDate()}`;
+      const visits = scoped.filter((e) => {
+        const t = new Date(e.service_date).getTime();
+        return t >= weekStart && t < weekEnd;
+      }).length;
+      return { w: label, visits };
+    });
+  }
   const scoped = filterEntriesLastWeeks(entries, CHART_WEEKS);
   const now = Date.now();
   return Array.from({ length: CHART_WEEKS }, (_, i) => {
@@ -112,8 +149,10 @@ function buildWeeklyTrend(entries: ChartEntry[]) {
   });
 }
 
-function buildServicesByType(entries: ChartEntry[]) {
-  const scoped = filterEntriesLastWeeks(entries, CHART_WEEKS);
+function buildServicesByType(entries: ChartEntry[], start?: Date, end?: Date) {
+  const scoped = start || end
+    ? filterEntriesInRange(entries, start, end)
+    : filterEntriesLastWeeks(entries, CHART_WEEKS);
   const counts: Record<string, number> = {};
   scoped.forEach((e) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,9 +201,17 @@ function activeClientCount(entries: ChartEntry[], ref: Date): number {
 function computeDashboardFromEntries(
   entries: ChartEntry[],
   registeredCount: number,
-  totalEntriesCount: number
+  totalEntriesCount: number,
+  chartStart?: Date,
+  chartEnd?: Date
 ): DashboardStats {
   const ref = new Date();
+  const periodEntries = (chartStart || chartEnd)
+    ? filterEntriesInRange(entries, chartStart, chartEnd)
+    : entries;
+  const activeClientsPeriod = new Set(
+    periodEntries.map((e) => e.client_id).filter(Boolean)
+  ).size;
   return {
     activeClients: activeClientCount(entries, ref),
     totalRegistered: registeredCount,
@@ -175,8 +222,13 @@ function computeDashboardFromEntries(
     totalHours: Math.round(
       entries.reduce((s, e) => s + (e.duration_minutes ?? 0), 0) / 60
     ),
-    weeklyTrend: buildWeeklyTrend(entries),
-    servicesByType: buildServicesByType(entries),
+    weeklyTrend: buildWeeklyTrend(entries, chartStart, chartEnd),
+    servicesByType: buildServicesByType(entries, chartStart, chartEnd),
+    servicesPeriod: periodEntries.length,
+    hoursPeriod: Math.round(
+      periodEntries.reduce((s, e) => s + (e.duration_minutes ?? 0), 0) / 60
+    ),
+    activeClientsPeriod,
   };
 }
 
@@ -263,13 +315,15 @@ export async function getServiceTypes(): Promise<string[]> {
   return data.map((r) => r.name);
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(chartStart?: Date, chartEnd?: Date): Promise<DashboardStats> {
   const supabase = await createClient();
   if (!supabase) {
     return computeDashboardFromEntries(
       demoServiceEntries as ChartEntry[],
       demoClients.length,
-      demoServiceEntries.length
+      demoServiceEntries.length,
+      chartStart,
+      chartEnd
     );
   }
 
@@ -286,7 +340,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return computeDashboardFromEntries(
     entries,
     clientsRes.count ?? 0,
-    entriesCountRes.count ?? 0
+    entriesCountRes.count ?? 0,
+    chartStart,
+    chartEnd
   );
 }
 

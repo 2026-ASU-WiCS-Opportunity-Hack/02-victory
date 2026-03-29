@@ -142,7 +142,7 @@ export function ServiceForm({ clientId, clientLabel, serviceTypes = [] }: Servic
         <CardHeader>
           <CardTitle className="font-heading text-xl">Service entry</CardTitle>
           <CardDescription>
-            Manual fields merge with drafted output from voice capture when you use it.
+            Fill in details below. Voice capture auto-fills summary and action items.
           </CardDescription>
         </CardHeader>
         <CardContent>

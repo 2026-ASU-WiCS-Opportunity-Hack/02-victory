@@ -24,6 +24,10 @@ function GoogleIcon() {
   );
 }
 
+const isSupabaseConfigured =
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -126,12 +130,14 @@ export default function LoginPage() {
               <GoogleIcon />
               {googlePending ? "Redirecting…" : "Continue with Google"}
             </Button>
-            <Link
-              href="/dashboard"
-              className={cn(buttonVariants({ variant: "secondary" }), "inline-flex w-full justify-center")}
-            >
-              Continue to demo dashboard
-            </Link>
+            {!isSupabaseConfigured && (
+              <Link
+                href="/dashboard"
+                className={cn(buttonVariants({ variant: "secondary" }), "inline-flex w-full justify-center")}
+              >
+                Continue to demo dashboard
+              </Link>
+            )}
             <p className="text-center text-sm text-muted-foreground">
               No account?{" "}
               <Link href="/signup" className="underline underline-offset-4 hover:text-foreground">

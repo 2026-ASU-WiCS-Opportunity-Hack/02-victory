@@ -22,6 +22,10 @@ interface StatsCardsLoaderProps {
   totalHours?: number;
   weeklyTrend?: { w: string; visits: number }[];
   servicesByType?: { name: string; n: number }[];
+  isFiltered?: boolean;
+  servicesPeriod?: number;
+  hoursPeriod?: number;
+  activeClientsPeriod?: number;
 }
 
 export function StatsCardsLoader(props: StatsCardsLoaderProps) {

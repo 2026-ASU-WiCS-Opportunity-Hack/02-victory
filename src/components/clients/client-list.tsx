@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,12 +18,15 @@ import type { ClientWithLastService } from "@/lib/data/queries";
 import { buttonVariants } from "@/lib/button-variants";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 10;
+
 interface ClientListProps {
   clients: ClientWithLastService[];
 }
 
 export function ClientList({ clients }: ClientListProps) {
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -34,6 +38,18 @@ export function ClientList({ clients }: ClientListProps) {
     });
   }, [clients, q]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  function handleSearch(value: string) {
+    setQ(value);
+    setPage(1); // reset to page 1 on new search
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -42,7 +58,7 @@ export function ClientList({ clients }: ClientListProps) {
           <Input
             placeholder="Search by name, email, or phone…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
             aria-label="Search clients"
           />
@@ -61,7 +77,6 @@ export function ClientList({ clients }: ClientListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead className="hidden sm:table-cell font-mono text-xs">Client ID</TableHead>
               <TableHead className="hidden md:table-cell">Contact</TableHead>
               <TableHead className="hidden lg:table-cell">Last service</TableHead>
               <TableHead className="hidden lg:table-cell">Address</TableHead>
@@ -69,7 +84,7 @@ export function ClientList({ clients }: ClientListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((c) => (
+            {paginated.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">
                   <div className="flex flex-col gap-0.5">
@@ -80,9 +95,6 @@ export function ClientList({ clients }: ClientListProps) {
                       {c.phone ?? "—"}
                     </span>
                   </div>
-                </TableCell>
-                <TableCell className="hidden max-w-[140px] truncate font-mono text-xs text-muted-foreground sm:table-cell">
-                  {c.id}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div className="flex flex-col text-sm">
@@ -119,9 +131,39 @@ export function ClientList({ clients }: ClientListProps) {
         ) : null}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Showing {filtered.length} of {clients.length} records.
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Showing {paginated.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–
+          {(currentPage - 1) * PAGE_SIZE + paginated.length} of {filtered.length} records.
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export function AppSidebar({ profile, isAdmin }: AppSidebarProps) {
   async function handleSignOut() {
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   }
 
   const initials = profile?.full_name

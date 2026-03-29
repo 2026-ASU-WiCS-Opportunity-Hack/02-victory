@@ -62,7 +62,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   async function handleSignOut() {
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   }
 
   return (
