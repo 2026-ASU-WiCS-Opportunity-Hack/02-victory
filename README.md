@@ -25,8 +25,7 @@
 - **AI:** Groq (Whisper STT + Llama 3.3 70B); optional Google Gemini fallback per architecture
 
 ## Live demo
-
-_Add your Vercel (or other) deployment URL here once deployed._
+(https://02-victory.vercel.app)
 
 ## Run locally
 
